@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Chat</title>
+		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.3/jquery.min.js"></script>
+		<script type="text/javascript" src="/socket.io/socket.io.js"></script>
+		<script type="text/javascript">
+		
+			var SERVER_ADDRESS = "example.org";
+			var SERVER_PORT = 4000; 
+			
+			function resizeFrame() {
+				var h = $(window).height() - $('#header').height() - $('#console').height() - 60;
+				$("#log").css('height', h);
+				$("#users").css('height', h);
+			}
+
+			function mainvisible() {
+				$("#main").show();
+			}
+
+			$(document).ready(function() {
+				resizeFrame();
+				setInterval(function() {
+					resizeFrame()
+				}, 1000);
+				var entry_el = $('#entry');
+				entry_el.focus();
+
+				var socket = io.connect("http://"+SERVER_ADDRESS+":"+SERVER_PORT);
+				
+				socket.on('message', function(message) {
+					switch (message.event) {
+						case 'USERLIST':
+							var users_list = eval(JSON.parse(message.data))
+							$('#users').html('<ul>');
+							$.each(users_list, function(index, user) {
+								$('#users ul').append('<li>' + user + '</li>');
+							});
+							$('#users').append('</ul>');
+							break;
+						case 'NICK':
+							$('#nick').html(message.data)
+							$('#log ul').find(msgclass).removeClass('.' + message.uid);
+							entry_el.attr('value', '');
+							entry_el.focus();
+							break;
+						case 'MSG':
+							var msgid = message.uid
+							var data = message.data
+
+							var data = data.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/^\s*/, '').replace(/\s*$/, '');
+
+							var prepend = '';
+							if(data.match(/^(&lt;.*&gt;)/))
+								prepend = data.match(/^(&lt;.*&gt;)/)[1]
+							var msgclass = '.' + msgid;
+							console.debug(data.substr(0, data.length) + '%' + prepend + (data.substr(0, data.length)).length + "%" + prepend.length)
+
+							if(!(data.substr(0, data.length) === prepend)) {// match prepend data
+								if(!$('#log ul').find(msgclass).length) {
+									$('#log ul').append('<li class="' + msgid + '">' + data + '</li>');
+								} else {
+									$('#log ul').find(msgclass).html('<li class="' + msgid + '">' + data + '</li>');
+								}
+							} else {
+								$('#log ul').find(msgclass).removeClass(msgid);
+							}
+
+							$("#log").animate({
+								scrollTop : $("#log").attr("scrollHeight") - $('#log').height()
+							}, 1);
+							resizeFrame();
+							entry_el.focus();
+							break;
+						case 'NOTIFY':
+						case 'ERRNICK':
+							var data = message.data
+
+							var data = data.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+							$('#log ul').append('<li>' + data + '</li>');
+
+							$("#log").animate({
+								scrollTop : $("#log").attr("scrollHeight") - $('#log').height()
+							}, 1);
+							break;
+						case 'CMD':
+							switch(message.data) {
+								case 'clear':
+									$("#log").html('');
+									break;
+							}
+							entry_el.attr('value', '');
+							entry_el.focus();
+							break;
+						default:
+							break;
+					}
+
+					resizeFrame();
+					entry_el.focus();
+				});
+
+				entry_el.keyup(function(event) {
+					$("#log").animate({
+						scrollTop : $("#log").attr("scrollHeight") - $('#log').height()
+					}, 1);
+					if(event.keyCode === 13) {
+						socket.json.send({
+							event : 'MSG',
+							data : ''
+						});
+						entry_el.attr('value', '');
+					}
+
+					var msg = entry_el.attr('value');
+					if(msg) {
+						socket.json.send({
+							event : 'MSG',
+							data : msg
+						});
+					}
+				});
+			});
+
+		</script>
+		<style type="text/css">
+			body {
+				background-color: #FFF;
+				color: #000;
+				font-size: 20px;
+				margin: 0;
+				padding: 0;
+				font-family: Arial, Verdana, sans-serif;
+			}
+			#main {
+				width: 100%;
+				display: block;
+			}
+			#header {
+				font-family: Arial, Verdana, sans-serif;
+				font-weight: bolder;
+				font-size: 30px;
+				text-align: center;
+			}
+			#log {
+				float: left;
+				-moz-border-radius: 1px 15px 1px 15px;
+				border-radius: 1px 15px 1px 15px;
+				border: solid 2px #848484;
+				overflow: auto;
+				padding-left: 10px;
+				height: 600px;
+				width: 85%;
+			}
+			#log ul {
+				padding: 0;
+				padding-left: 15px;
+				margin: 0;
+				margin-left: 15px
+			}
+			#log ul li {
+				list-style-type: none;
+			}
+			#footer {
+				width: 100%
+			}
+			#nick {
+				color: #333333;
+				font-size: 20px;
+				float: left;
+				padding-left: 20px;
+			}
+			#console input {
+				border: solid 2px #848484;
+				color: #000;
+				-moz-border-radius: 1px 15px 1px 15px;
+				border-radius: 1px 15px 1px 15px;
+				position: fixed;
+				bottom: 0;
+				font-size: 20px;
+				float: left;
+				height: 50px;
+				padding-left: 15px;
+				padding-right: 15px;
+				margin-left: 15px;
+				width: 90%;
+				margin-right: 15px;
+				overflow: hidden;
+			}
+			#users {
+				background-color: transparent;
+				text-align: left;
+				color: #000;
+				margin-left: 84%;
+				width: 15%;
+			}
+			#users ul li {
+				list-style-type: none;
+			}
+			#enter {
+			}
+
+		</style>
+	</head>
+	<body>
+		<div id="main">
+			<div id="header">
+				Node Chat
+			</div>
+			<div id="log">
+				<ul></ul>
+			</div>
+			<div id="users"></div>
+			<div style="clear: both"></div>
+			<div id="footer">
+				<div id="nick"></div>
+				<div id="console">
+					<input type="text" id="entry" />
+				</div>
+				<div style="clear: both"></div>
+			</div>
+		</div>
+	</body>
+</html>
+

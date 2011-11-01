@@ -1,0 +1,17 @@
+                StreamChat - v1.0
+              License: GNU GPL v2.0
+                 Author: EmErgE
+
+Stream Chat is a real-time chat application written in node.js that 
+relies on socket.io for communication. The messages are updated on
+keyup event providing simultaneous feedback to all users as they are
+typed.
+
+Files: 
+ * streamchat.js - server-side node.js javascript file
+ * streamchat.html - default client-side HTML5 file (served by node.js)
+
+Default Host: example.org (can be modified in 'chat.html')
+Default Port: 4000 (can be modified in 'chat.js' and 'chat.html')
+Full URI: http://example.org:4000
+
